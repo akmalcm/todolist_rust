@@ -1,12 +1,11 @@
-use chrono::{ DateTime, Utc };
-use std::collections::LinkedList;
+use chrono::{ DateTime, Local };
 use std::fmt::Write;
 
 struct Todo {
     id: usize,
     title: String,
     description: String,
-    created_at: DateTime<Utc>
+    created_at: DateTime<Local>
 }
 
 impl Clone for Todo {
@@ -21,139 +20,139 @@ impl Clone for Todo {
 }
 
 fn main() {
-    let mut list: LinkedList<Todo> = LinkedList::new();
+    let mut list: Vec<Todo> = Vec::new();
+    let mut prompt = true;
 
-    let new_todo = Todo {
-        id: 1,
-        title: String::from("title 1"),
-        description: String::from("description 1"),
-        created_at: Utc::now()
-    };
-    let new_todo2 = Todo {
-        id: 2,
-        title: String::from("title 2"),
-        description: String::from("description 2"),
-        created_at: Utc::now()
-    };
-    let del_todo = new_todo.clone();
-    let mut ed_todo = new_todo2.clone();
+    while prompt {
+        println!("1. Add todo");
+        println!("2. Edit todo");
+        println!("3. Delete todo");
+        println!("4. Print todos");
+        println!("5. Exit");
+        println!("Enter your choice :");
 
-    add_todo(&mut list, new_todo);
-    add_todo(&mut list, new_todo2);
+        let mut choice = String::new();
+        std::io::stdin().read_line(&mut choice).expect("Failed to read line");
+        let trimmed = choice.trim();
+        match trimmed.parse::<u32>() {
+            Ok(i) => {
+                match i {
+                    1 => {
+                        let id: usize = list.last().map_or(0, |todo| todo.id) + 1;
+                        let todo = prompt_todo(id);
+                        add_todo(&mut list, todo);
+                    },
+                    2 => {
+                        println!("Enter id to edit :");
+                        let mut input: String = String::new();
+                        std::io::stdin().read_line(&mut input).expect("Failed to read line");
 
-    print_todos(&list);
+                        let id = input.trim().parse::<usize>().expect("This was not an integer");
+                        if list.iter().position(|value| value.id == id).is_none() {
+                            println!("ID not found");
+                        }else{
+                            let todo = prompt_todo(id);
+                            edit_todo(&mut list, todo)
+                        }
 
-    delete_todo(&mut list, del_todo.id);
+                    },
+                    3 => {
+                        println!("Enter id to delete :");
+                        let mut input: String = String::new();
+                        std::io::stdin().read_line(&mut input).expect("Failed to read line");
+                        let id = input.trim().parse::<usize>().expect("This was not an integer");
 
-    ed_todo.description = String::from("description Updated");
-    edit_todo(&mut list, ed_todo);
-
-    print_todos(&list);
-}
-
-fn add_todo(list: &mut LinkedList<Todo>, todo: Todo){
-    list.push_back(todo)
-}
-
-fn delete_todo(list: &mut LinkedList<Todo>, id: usize){
-    if id.le(&0){
-        return;
+                        // if id not present in list then return
+                        if list.iter().position(|value| value.id == id).is_none() {
+                            println!("ID not found");
+                        }else{
+                            delete_todo(&mut list, id)
+                        }
+                    },
+                    4 => {
+                        print_todos(&list);
+                    },
+                    5 => {
+                        println!("Thanks for using this todo list app");
+                        prompt = false;
+                    },
+                    _ => {
+                        println!("Invalid choice");
+                    }
+                }
+            },
+            Err(..) => println!("this was not an integer: {}", trimmed),
+        };
     }
+}
+
+fn add_todo(list: &mut Vec<Todo>, todo: Todo){
+    list.push(todo);
+}
+
+fn delete_todo(list: &mut Vec<Todo>, id: usize){
     // Split the list in 2
     let mut split_list = list.split_off(id-1);
     // Remove the first element of the second half
-    split_list.pop_front();
-    // Join the 2 halves back together, except for the middle element
+    split_list.remove(0);
+    // Join the 2 halves back together
     list.append(&mut split_list);
+
+    println!("Todo with id {} deleted", id);
 }
 
-fn edit_todo(list: &mut LinkedList<Todo>, todo: Todo){
-    // my old code
-    // let mut index_in_list: Option<usize> = None;
-
-    // // Split the list in 2
-    // for (index, value) in list.iter().enumerate() {
-    //     if value.id == todo.id {
-    //         index_in_list = Some(index);
-    //         break;
-    //     }
-    // }
-
-    // if index_in_list == None {
-    //     return
-    // }
-
-    // // Split the list in 2
-    // let mut split_list = list.split_off(index_in_list.unwrap());
-    // // Remove the first element of the second half
-    // split_list.pop_front();
-    // split_list.push_front(todo);
-    // // Join the 2 halves back together, except for the middle element
-    // list.append(&mut split_list);
-
-    // optimized by chatgpt
+fn edit_todo(list: &mut Vec<Todo>, todo: Todo){
     let index_in_list = list.iter().position(|value| value.id == todo.id);
 
     if index_in_list.is_none() {
         return;
     }
+    list[index_in_list.unwrap()] = todo;
 
-    if let Some(index) = index_in_list {
-        let mut temp_list = LinkedList::new();
-
-        for (i, value) in list.iter().enumerate() {
-            if i != index {
-                temp_list.push_back(value.clone());
-            }
-        }
-
-        list.clear();
-        list.push_front(todo);
-        list.append(&mut temp_list);
-    }
+    println!("Todo with id {} updated", list[index_in_list.unwrap()].id);
 }
 
-fn print_todos(list: &LinkedList<Todo>) {
-    // my old code
-    // for (index, value) in list.iter().enumerate() {
-    //     if index == 0 {
-    //         print!("[")
-    //     }
-
-    //     print!("{{{},{},{},{}}}", value.id, value.title, value.description, value.created_at);
-
-    //     if index == list.len() - 1 {
-    //         print!("]")
-    //     } else{
-    //         print!(",")
-    //     }
-    //     println!()
-    // }
-
-    // optimized by chatgpt
+fn print_todos(list: &Vec<Todo>) {
     let mut formatted_str = String::new();
-    let mut is_first = true;
+    formatted_str.push('[');
 
     for value in list.iter() {
-        if is_first {
-            formatted_str.push('[');
-            is_first = false;
-        } else {
-            formatted_str.push(',');
-            formatted_str.push(' ');
-        }
-
         write!(
             formatted_str,
             "{{ {}, {}, {}, {} }}",
             value.id, value.title, value.description, value.created_at
         )
         .expect("Failed to write to buffer");
+
+        if value.id != list.last().unwrap().id {
+            write!(formatted_str, ", ").expect("Failed to write to buffer");
+        }
     }
 
-    if !is_first {
-        formatted_str.push(']');
-    }
+    formatted_str.push(']');
 
     println!("{}", formatted_str);
+}
+
+fn prompt_todo(id: usize) -> Todo {
+    let mut input: String = String::new();
+
+    input.clear();
+    println!("Enter title :");
+    std::io::stdin().read_line(&mut input).expect("Failed to read line");
+    let title = input.clone();
+
+    input.clear();
+    println!("Enter description :");
+    std::io::stdin().read_line(&mut input).expect("Failed to read line");
+    let description = input.clone();
+
+    let new_todo = Todo {
+        id: id,
+        title: String::from(title.trim()),
+        description: String::from(description.trim()),
+        created_at: Local::now()
+    };
+
+    return new_todo;
 }
